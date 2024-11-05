@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حساب نسب المواد</title>
+    <style>
+        body { 
+            font-family: 'Arial', sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            background: linear-gradient(135deg, #4f4c6b, #87a8b0); 
+            color: #333; 
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .container { 
+            max-width: 600px; 
+            width: 100%; 
+            padding: 20px; 
+            background-color: #fff; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); 
+            text-align: center; 
+        }
+        h1 { 
+            color: #007BFF; 
+            font-size: 24px; 
+            margin-bottom: 20px; 
+        }
+        .input-field { 
+            display: flex; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            margin: 15px 0;
+            padding: 10px; 
+            border-radius: 8px; 
+            background: #f9f9fc; 
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); 
+        }
+        .input-field label { 
+            font-weight: bold; 
+            color: #555; 
+            margin-bottom: 5px; 
+            font-size: 14px;
+        }
+        .input-field input { 
+            width: 100%; 
+            padding: 8px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+            font-size: 16px;
+        }
+        button { 
+            padding: 12px 20px; 
+            font-size: 16px; 
+            background-color: #007BFF; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin-top: 15px; 
+            transition: background-color 0.3s ease; 
+            width: 100%;
+        }
+        button:hover { 
+            background-color: #0056b3; 
+        }
+        .result { 
+            margin-top: 20px; 
+            font-size: 18px; 
+            font-weight: bold; 
+            color: #28a745; 
+        }
+        .message { 
+            margin-top: 20px; 
+            font-size: 18px; 
+            color: #dc3545; 
+        }
+        canvas { 
+            margin-top: 20px; 
+            max-width: 100%; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>حساب نسب المواد</h1>
+        
+        <label for="level">اختر المستوى:</label>
+        <select id="level" onchange="updateWeights()">
+            <option value="1">الأول ثانوي</option>
+            <option value="2">الثاني ثانوي</option>
+            <option value="3">الثالث ثانوي</option>
+        </select>
+        
+        <!-- حقول إدخال الدرجات -->
+        <div class="input-field" id="subjectFields">
+            <!-- الحقول ستضاف هنا ديناميكيًا -->
+        </div>
+        
+        <!-- زر حساب النتيجة -->
+        <button onclick="calculate()">احسب النسبة</button>
+        
+        <!-- عرض النتيجة -->
+        <div class="result" id="result"></div>
+        <div class="message" id="message"></div>
+
+        <!-- الرسم البياني -->
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <!-- إضافة مكتبة Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        let weights = {
+            1: { // الأول ثانوي
+                "اللغة الإنجليزية": 15.63,
+                "الرياضيات": 15.63,
+                "القرآن الكريم والتفسير": 15.63,
+                "الكفايات اللغوية": 12.5,
+                "التفكير الناقد": 15.63,
+                "التقنية الرقمية": 9.38,
+                "الأحياء": 15.63
+            },
+            2: { // الثاني ثانوي
+                "اللغة الإنجليزية": 16.67,
+                "الرياضيات": 16.67,
+                "الكيمياء": 16.67,
+                "اللياقة والثقافة الصحية": 16.67,
+                "الأحياء": 13.33,
+                "التوحيد": 10,
+                "الفنون": 10
+            },
+            3: { // الثالث ثانوي
+                "مهارات إدارية": 10,
+                "التقنية الرقمية": 10,
+                "البحث ومصادر المعلومات": 10,
+                "الجغرافيا": 10,
+                "الرياضيات": 13.33,
+                "اللغة الإنجليزية": 13.33,
+                "الكيمياء": 16.67,
+                "الفيزياء": 16.67
+            }
+        };
+
+        function updateWeights() {
+            const level = document.getElementById("level").value;
+            const subjectFields = document.getElementById("subjectFields");
+            subjectFields.innerHTML = "";
+
+            if (level == 3 && !weights[3]) {
+                document.getElementById("message").textContent = "لا يوجد معلومات للصف الثالث.";
+                return;
+            }
+
+            for (let subject in weights[level]) {
+                const field = document.createElement("div");
+                field.className = "input-field";
+                field.innerHTML = `<label for="${subject}">${subject}</label>
+                                   <input type="number" id="${subject}" placeholder="أدخل الدرجة" min="0" max="100">`;
+                subjectFields.appendChild(field);
+            }
+        }
+
+        function calculate() {
+            const level = document.getElementById("level").value;
+            let totalScore = 0;
+            const grades = {};
+            let allFieldsFilled = true;
+
+            for (let subject in weights[level]) {
+                const input = document.getElementById(subject);
+                const grade = parseFloat(input.value);
+                
+                if (isNaN(grade) || grade < 0 || grade > 100) {
+                    input.style.borderColor = "red";
+                    alert(`يرجى إدخال درجة صحيحة لمادة ${subject} بين 0 و 100.`);
+                    allFieldsFilled = false;
+                    break;
+                } else {
+                    input.style.borderColor = "";
+                    totalScore += grade * (weights[level][subject] / 100);
+                    grades[subject] = grade;
+                }
+            }
+
+            if (allFieldsFilled) {
+                document.getElementById("result").textContent = `النسبة الكلية: ${totalScore.toFixed(2)}%`;
+                updateChart(grades);
+            }
+        }
+
+        let chart;
+        function updateChart(grades) {
+            const labels = Object.keys(grades);
+            const data = Object.values(grades);
+
+            if (chart) chart.destroy();
+
+            const ctx = document.getElementById("myChart").getContext("2d");
+            chart = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "درجات المواد",
+                        data: data,
+                        backgroundColor: [
+                            "#007bff", "#ffc107", "#28a745", "#dc3545", "#6f42c1", "#17a2b8", "#fd7e14"
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+        }
+
+        updateWeights(); // استدعاء لتحديث الحقول عند تحميل الصفحة
+    </script>
+</body>
+</html>
